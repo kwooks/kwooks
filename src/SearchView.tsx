@@ -2,37 +2,48 @@ import React, { useState } from "react";
 import { Text, View, Button, FlatList } from "react-native";
 import { SearchBar, ListItem, Overlay } from "react-native-elements";
 
-interface Book {
+export interface Book {
   isbn: string;
   title: string;
   author: string;
+  state?: ReadingState;
   isAlreadyInLibrary: boolean;
 }
 
-const mockSearchBase: Book[] = [
+export enum ReadingState {
+  to_read,
+  reading,
+  completed,
+}
+
+export const mockSearchBase: Book[] = [
   {
     isbn: "a",
     title: "Homo Deus",
     author: "Yuval Noah Harari",
     isAlreadyInLibrary: true,
+    state: ReadingState.completed,
   },
   {
     isbn: "b",
     title: "1984",
     author: "George Orwell",
     isAlreadyInLibrary: true,
+    state: ReadingState.completed,
   },
   {
     isbn: "c",
     title: "Der kleine Prinz",
     author: "Saint Exupery",
     isAlreadyInLibrary: false,
+    state: ReadingState.completed,
   },
   {
     isbn: "d",
     title: "Lean Startup",
     author: "Eric Ries",
     isAlreadyInLibrary: false,
+    state: ReadingState.reading,
   },
 ];
 
@@ -44,12 +55,6 @@ async function search(searchterm: string): Promise<Book[]> {
       book.isbn.toLowerCase() === searchterm.toLowerCase()
     );
   });
-}
-
-enum ReadingState {
-  to_read,
-  reading,
-  completed,
 }
 
 interface SearchViewProps {
@@ -107,11 +112,17 @@ export function SearchView(props: SearchViewProps) {
             title="Lese-Wunschliste"
             onPress={() => {
               props.onAdd(bookToAdd!, ReadingState.to_read);
-              
+
               setSearchResult(
                 searchResult.map((book) => {
-                  if(book.isbn !== bookToAdd) return book;
-                  else return {isbn: book.isbn, author: book.author, title: book.title, isAlreadyInLibrary: true}
+                  if (book.isbn !== bookToAdd) return book;
+                  else
+                    return {
+                      isbn: book.isbn,
+                      author: book.author,
+                      title: book.title,
+                      isAlreadyInLibrary: true,
+                    };
                 })
               );
               setBookToAdd(undefined);
