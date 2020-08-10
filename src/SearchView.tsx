@@ -7,13 +7,12 @@ export interface Book {
   title: string;
   author: string;
   state?: ReadingState;
-  isAlreadyInLibrary: boolean;
 }
 
 export enum ReadingState {
-  to_read,
-  reading,
-  completed,
+  to_read = "to_read",
+  reading = "reading",
+  completed = "completed",
 }
 
 export const mockSearchBase: Book[] = [
