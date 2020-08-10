@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { Text, View, Button, FlatList } from "react-native";
 import { SearchBar, ListItem, Overlay } from "react-native-elements";
+import {isbn} from "simple-isbn";
 
 export interface Book {
   isbn: string;
   title: string;
-  author: string;
+  authors: string[];
   state?: ReadingState;
-  isAlreadyInLibrary: boolean;
 }
 
 export enum ReadingState {
@@ -16,45 +16,43 @@ export enum ReadingState {
   completed,
 }
 
-export const mockSearchBase: Book[] = [
-  {
-    isbn: "a",
-    title: "Homo Deus",
-    author: "Yuval Noah Harari",
-    isAlreadyInLibrary: true,
-    state: ReadingState.completed,
-  },
-  {
-    isbn: "b",
-    title: "1984",
-    author: "George Orwell",
-    isAlreadyInLibrary: true,
-    state: ReadingState.completed,
-  },
-  {
-    isbn: "c",
-    title: "Der kleine Prinz",
-    author: "Saint Exupery",
-    isAlreadyInLibrary: false,
-    state: ReadingState.completed,
-  },
-  {
-    isbn: "d",
-    title: "Lean Startup",
-    author: "Eric Ries",
-    isAlreadyInLibrary: false,
-    state: ReadingState.reading,
-  },
-];
-
 async function search(searchterm: string): Promise<Book[]> {
-  return mockSearchBase.filter((book) => {
-    return (
-      book.title.toLowerCase().includes(searchterm.toLowerCase()) ||
-      book.author.toLowerCase().includes(searchterm.toLowerCase()) ||
-      book.isbn.toLowerCase() === searchterm.toLowerCase()
-    );
-  });
+  const request = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchterm)}`);
+  const result = await request.json();
+  if (!result.items) return [];
+  return deduplicateBooks(result.items.map(googleBooksResultToBook).filter((googleBooksResultToBook: Book | undefined) => googleBooksResultToBook != undefined));
+}
+
+function deduplicateBooks(books: Book[]): Book[] {
+  const set = new Set<string>();
+  const result = new Array<Book>();
+  for (const book of books) {
+    if (set.has(book.isbn)) continue;
+    set.add(book.isbn);
+    result.push(book);
+  }
+  return result;
+}
+
+function googleBooksResultToBook(googleBook: any): Book | undefined {
+  console.log(googleBook);
+  const isbn13 = getISBN(googleBook);
+  if(!isbn13) return undefined; 
+  if (googleBook.volumeInfo.authors == undefined) googleBook.volumeInfo.authors = [""];
+  return {
+    "title": googleBook.volumeInfo.title,
+    "authors": googleBook.volumeInfo.authors,
+    "isbn": isbn13
+  };
+}
+
+function getISBN(googleBook: any): string | undefined {
+  if (!googleBook.volumeInfo.industryIdentifiers) return undefined; 
+  const isbn13 = googleBook.volumeInfo.industryIdentifiers.find((v: any)=>v.type==="ISBN_13")?.identifier;
+  if (isbn13) return isbn13;
+  const isbn10 = googleBook.volumeInfo.industryIdentifiers.find((v: any)=>v.type==="ISBN_10")?.identifier;
+  if (isbn10) return isbn.toIsbn13(isbn10);
+  return undefined;
 }
 
 interface SearchViewProps {
@@ -89,9 +87,9 @@ export function SearchView(props: SearchViewProps) {
           return (
             <ListItem
               title={info.item.title}
-              subtitle={info.item.author}
+              subtitle={info.item.authors.join(", ")}
               checkmark={
-                info.item.isAlreadyInLibrary || (
+                !!info.item.state || (
                   <Button
                     title="+"
                     onPress={() => {
@@ -119,9 +117,8 @@ export function SearchView(props: SearchViewProps) {
                   else
                     return {
                       isbn: book.isbn,
-                      author: book.author,
+                      authors: book.authors,
                       title: book.title,
-                      isAlreadyInLibrary: true,
                     };
                 })
               );
