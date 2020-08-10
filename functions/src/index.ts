@@ -5,106 +5,88 @@ import * as uuid from "uuid";
 admin.initializeApp();
 const db = admin.firestore();
 
-// Start writing Firebase Functions
-// https://firebase.google.com/docs/functions/typescript
-
-export const greeter = functions.https.onRequest((request, response) => {
-  response.send("Greetings, " + request.body);
-});
-
-export const helloWorld = functions.https.onRequest((request, response) => {
-  functions.logger.info("Hello logs!", { structuredData: true });
-  response.send("Hello from Kwooks!");
-});
-
-export const createUserAccount = functions.https.onRequest(
-  async (request, response) => {
-    const token = uuid.v4();
-    const user = await db
-      .collection("users")
-      .add({ tokens: [token], library: [] });
-    response.json({
-      token: token,
-      id: user.id,
-    });
-  }
-);
-
-export const addQuote = functions.https.onRequest(async (request, response) => {
-  const quote = request.body.quote;
-  const isbn = request.body.isbn;
-  const token = request.body.token;
+async function getUserByToken(token: string) {
   const result = await db
     .collection("users")
     .where("tokens", "array-contains", token)
     .get();
+
   if (result.empty) {
-    response.status(401);
-    response.end();
-    return;
+    return undefined;
   }
-  const user = result.docs[0];
-  await db.collection("quotes").add({ isbn, quote, userID: user.id });
-  response.end();
-});
 
-export const addToLibrary = functions.https.onRequest(
-  async (request, response) => {
-    const isbn = request.body.isbn;
+  return result.docs[0];
+}
+
+function withAuthentication(
+  callback: (
+    request: functions.https.Request,
+    response: functions.Response<any>,
+    user: FirebaseFirestore.QueryDocumentSnapshot<
+      FirebaseFirestore.DocumentData
+    >
+  ) => Promise<void>
+) {
+  return async (
+    request: functions.https.Request,
+    response: functions.Response<any>
+  ) => {
     const token = request.body.token;
-    const state = request.body.state;
-
-    const result = await db
-      .collection("users")
-      .where("tokens", "array-contains", token)
-      .get();
-    if (result.empty) {
-      response.status(401);
-      response.end();
+    const user = await getUserByToken(token);
+    if (!user) {
+      response.status(401).end();
       return;
     }
-    const user = result.docs[0];
+
+    callback(request, response, user);
+  };
+}
+
+export const createUserAccount = functions.https.onRequest(
+  async (request, response) => {
+    const tokenOfNewUser = uuid.v4();
+
+    await db.collection("users").add({ tokens: [tokenOfNewUser] });
+
+    response.json({
+      token: tokenOfNewUser,
+    });
+  }
+);
+
+export const addQuote = functions.https.onRequest(
+  withAuthentication(async (request, response, user) => {
+    const quote = request.body.quote;
+    const isbn = request.body.isbn;
+
+    await db.collection("quotes").add({ isbn, quote, userID: user.id });
+    response.status(200).end();
+  })
+);
+
+export const addToLibrary = functions.https.onRequest(
+  withAuthentication(async (request, response, user) => {
+    const isbn = request.body.isbn;
+    const state = request.body.state;
 
     await user.ref.collection("library").doc(isbn).set({ state: state });
 
-    response.end();
-  }
+    response.status(200).end();
+  })
 );
+
 export const deleteBookFromLibrary = functions.https.onRequest(
-  async (request, response) => {
+  withAuthentication(async (request, response, user) => {
     const isbn = request.body.isbn;
-    const token = request.body.token;
-    const result = await db
-      .collection("users")
-      .where("tokens", "array-contains", token)
-      .get();
-    if (result.empty) {
-      response.status(401);
-      response.end();
-      return;
-    }
-    const user = result.docs[0];
 
     await user.ref.collection("library").doc(isbn).delete();
 
     response.end();
-  }
+  })
 );
 
 export const getUsersLibrary = functions.https.onRequest(
-  async (request, response) => {
-    const token = request.body.token;
-    const result = await db
-      .collection("users")
-      .where("tokens", "array-contains", token)
-      .get();
-    if (result.empty) {
-      response.status(401);
-      response.end();
-      return;
-    }
-
-    const user = result.docs[0];
+  withAuthentication(async (request, response, user) => {
     const library_result = await user.ref.collection("library").get();
 
     response.json({
@@ -112,5 +94,5 @@ export const getUsersLibrary = functions.https.onRequest(
         return { isbn: element.id, state: element.data().state };
       }),
     });
-  }
+  })
 );
