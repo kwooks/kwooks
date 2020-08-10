@@ -2,8 +2,9 @@ import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { QuoteScreen } from "./QuoteScreen";
-import { SearchView } from "./SearchView";
-import Constants from "expo-constants";
+import { LibraryScreen } from "./LibraryScreen"
+import Constants from "expo-constants"
+import { SearchView, mockSearchBase, Book } from "./SearchView";
 import SwipeablePanel from "rn-swipeable-panel";
 import * as firebase from 'firebase';
 
@@ -40,7 +41,7 @@ export default function App() {
         onClose={() => setPanelActive(false)}
         barStyle={undefined as unknown as object}
       >
-        <SearchView onAdd={() => {}} onClose={() => {}} />
+      <LibraryScreen books={mockSearchBase} onOpenFilteredQuoteView={(book: Book) => {return;}}/>
       </SwipeablePanel>
     </View>
   );
