@@ -65,30 +65,52 @@ export const addToLibrary = functions.https.onRequest(
     }
     const user = result.docs[0];
 
-    await user.ref.collection("library").doc(isbn).set({"state": state});
+    await user.ref.collection("library").doc(isbn).set({ state: state });
 
     response.end();
   }
 );
 export const deleteBookFromLibrary = functions.https.onRequest(
-    async (request, response) => {
-      const isbn = request.body.isbn;
-      const token = request.body.token;
-      const result = await db
-        .collection("users")
-        .where("tokens", "array-contains", token)
-        .get();
-      if (result.empty) {
-        response.status(401);
-        response.end();
-        return;
-      }
-      const user = result.docs[0];
-  
-      await user.ref.collection("library").doc(isbn).delete();
-  
+  async (request, response) => {
+    const isbn = request.body.isbn;
+    const token = request.body.token;
+    const result = await db
+      .collection("users")
+      .where("tokens", "array-contains", token)
+      .get();
+    if (result.empty) {
+      response.status(401);
       response.end();
+      return;
     }
-  );
+    const user = result.docs[0];
 
+    await user.ref.collection("library").doc(isbn).delete();
 
+    response.end();
+  }
+);
+
+export const getUsersLibrary = functions.https.onRequest(
+  async (request, response) => {
+    const token = request.body.token;
+    const result = await db
+      .collection("users")
+      .where("tokens", "array-contains", token)
+      .get();
+    if (result.empty) {
+      response.status(401);
+      response.end();
+      return;
+    }
+
+    const user = result.docs[0];
+    const library_result = await user.ref.collection("library").get();
+
+    response.json({
+      library: library_result.docs.map((element) => {
+        return { isbn: element.id, state: element.data().state };
+      }),
+    });
+  }
+);

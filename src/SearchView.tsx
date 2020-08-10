@@ -11,9 +11,9 @@ export interface Book {
 }
 
 export enum ReadingState {
-  to_read,
-  reading,
-  completed,
+  to_read = "to_read",
+  reading = "reading",
+  completed = "completed",
 }
 
 async function search(searchterm: string): Promise<Book[]> {
