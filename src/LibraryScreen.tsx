@@ -1,37 +1,24 @@
 import React, { useState, useEffect } from "react";
-import { Text, View, SectionList, TouchableHighlight } from "react-native";
-
+import { Text, View, SectionList } from "react-native";
 import { ListItem, Overlay } from "react-native-elements";
-
-import DraggableFlatList from "react-native-draggable-flatlist";
-
-import { Book, ReadingState } from "./SearchView";
-import { ProgressPlugin } from "webpack";
 import { TouchableOpacity } from "react-native-gesture-handler";
-
 import { RadioButton } from "react-native-paper";
+import { Book, ReadingState } from "./Book";
 
-interface LibraryScreenProps {
-  onOpenFilteredQuoteView(book: Book): void;
-}
-
-interface sortedBooks {
-  completed: Book[];
-  to_read: Book[];
-  reading: Book[];
-}
-
-function sortBooksByCategory(books: Book[]): sortedBooks {
-  var sortedList: sortedBooks = { completed: [], reading: [], to_read: [] };
+function groupBooksByCategory(books: Book[]) {
+  const completed: Book[] = [];
+  const reading: Book[] = [];
+  const to_read: Book[] = [];
   books.forEach((book) => {
-    if (book.state == ReadingState.completed) sortedList.completed.push(book);
-    if (book.state == ReadingState.reading) sortedList.reading.push(book);
-    if (book.state == ReadingState.to_read) sortedList.to_read.push(book);
+    if (book.state === ReadingState.completed) completed.push(book);
+    if (book.state === ReadingState.reading) reading.push(book);
+    if (book.state === ReadingState.to_read) to_read.push(book);
   });
-  return sortedList;
+
+  return { completed, reading, to_read };
 }
 
-async function changeBookState(bookISBN: string, newState: ReadingState) {
+async function publishBookState(bookISBN: string, newState: ReadingState) {
   await fetch("https://us-central1-kwooks.cloudfunctions.net/addToLibrary", {
     body: JSON.stringify({
       token: "dc7bb80a-7df0-4d5b-a8cb-26ba8f654e5a",
@@ -43,10 +30,11 @@ async function changeBookState(bookISBN: string, newState: ReadingState) {
   });
 }
 
-export function LibraryScreen(props: LibraryScreenProps) {
+interface LibraryScreenProps {
+  onOpenFilteredQuoteView(book: Book): void;
+}
 
-  const [selectedBook, setSelectedBook] = useState<Book>();
-
+function useLibrary(): [Book[], React.Dispatch<React.SetStateAction<Book[]>>] {
   const [library, setLibrary] = useState<Book[]>([]);
   useEffect(() => {
     async function doit() {
@@ -61,28 +49,35 @@ export function LibraryScreen(props: LibraryScreenProps) {
         }
       );
 
-      const library: {
+      const result: {
         library: { isbn: string; state: ReadingState }[];
       } = await response.json();
-      console.log(library);
 
-      const lib = library.library.map((element) => {
+      const enrichedLibrary = result.library.map((element) => {
         const book: Book = {
           isbn: element.isbn,
-          author: element.isbn,
+          authors: [element.isbn],
           state: element.state,
           title: element.isbn,
         };
         return book;
       });
 
-      setLibrary(lib);
-      console.log(lib);
+      setLibrary(enrichedLibrary);
     }
+
     doit();
   }, [setLibrary]);
 
-  const sortedBooks: sortedBooks = sortBooksByCategory(library);
+  return [library, setLibrary];
+}
+
+export function LibraryScreen(props: LibraryScreenProps) {
+  const [selectedBook, setSelectedBook] = useState<Book | undefined>();
+
+  const [library, setLibrary] = useLibrary();
+
+  const sortedBooks = groupBooksByCategory(library);
 
   return (
     <View style={{ flex: 1, paddingHorizontal: 30, paddingVertical: 20 }}>
@@ -96,7 +91,7 @@ export function LibraryScreen(props: LibraryScreenProps) {
           return (
             <TouchableOpacity
               onPress={() => props.onOpenFilteredQuoteView(item)}
-              onLongPress={()=> setSelectedBook(item)}
+              onLongPress={() => setSelectedBook(item)}
             >
               <View>
                 <ListItem title={item.title}></ListItem>
@@ -106,33 +101,28 @@ export function LibraryScreen(props: LibraryScreenProps) {
         }}
         renderSectionHeader={(sectionheader) => {
           return (
-            <View>
-              <Text style={{ fontSize: 20 }}>
-                {sectionheader.section.title}
-              </Text>
-            </View>
+            <Text style={{ fontSize: 20 }}>{sectionheader.section.title}</Text>
           );
         }}
-        keyExtractor={(item) =>
-          `sectionlist-item-${typeof item === "string" ? item : item.isbn}`
-        }
+        keyExtractor={(item) => (typeof item === "string" ? item : item.isbn)}
       />
       <Overlay isVisible={!!selectedBook} animationType="slide" transparent>
         <View>
           <Text>Verschieben nach</Text>
 
           <RadioButton.Group
-            onValueChange={(value) => {
-              changeBookState(selectedBook!.isbn, value as ReadingState);
-              setSelectedBook(undefined);              
+            onValueChange={async (value) => {
+              setSelectedBook(undefined);
               setLibrary(
                 library.map((book) => {
-                  if (book == selectedBook) {
-                    return {...book, state:value as ReadingState};
+                  if (book === selectedBook) {
+                    return { ...book, state: value as ReadingState };
                   }
                   return book;
                 })
               );
+
+              await publishBookState(selectedBook!.isbn, value as ReadingState);
             }}
             value={selectedBook?.state!}
           >

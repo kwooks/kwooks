@@ -1,26 +1,49 @@
 import React, { useState } from "react";
 import { Text, View, Button, FlatList } from "react-native";
 import { SearchBar, ListItem, Overlay } from "react-native-elements";
-import {isbn} from "simple-isbn";
+import { isbn } from "simple-isbn";
+import { Book, ReadingState } from "./Book";
 
-export interface Book {
-  isbn: string;
-  title: string;
-  authors: string[];
-  state?: ReadingState;
+function filterUndefined<T>(arr: (T | undefined)[]): T[] {
+  return arr.filter((v) => v != undefined) as T[];
 }
 
-export enum ReadingState {
-  to_read = "to_read",
-  reading = "reading",
-  completed = "completed",
+function getISBN(googleBook: any): string | undefined {
+  const industryIdentifiers = googleBook.volumeInfo.industryIdentifiers;
+  if (!industryIdentifiers) return undefined;
+
+  const isbn13 = industryIdentifiers.find((v: any) => v.type === "ISBN_13");
+  if (isbn13) return isbn13.identifier;
+
+  const isbn10 = industryIdentifiers.find((v: any) => v.type === "ISBN_10");
+  if (isbn10) return isbn.toIsbn13(isbn10.identifier);
+
+  return undefined;
 }
 
-async function search(searchterm: string): Promise<Book[]> {
-  const request = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchterm)}`);
+function googleBooksResultToBook(googleBook: any): Book | undefined {
+  const isbn = getISBN(googleBook);
+  if (!isbn) return undefined;
+
+  return {
+    title: googleBook.volumeInfo.title,
+    authors: googleBook.volumeInfo.authors || [],
+    isbn: isbn,
+  };
+}
+
+async function searchGoogleBooks(searchterm: string): Promise<Book[]> {
+  const request = await fetch(
+    `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+      searchterm
+    )}`
+  );
   const result = await request.json();
   if (!result.items) return [];
-  return deduplicateBooks(result.items.map(googleBooksResultToBook).filter((googleBooksResultToBook: Book | undefined) => googleBooksResultToBook != undefined));
+
+  const books: Book[] = result.items.map(googleBooksResultToBook);
+  const definedBooks = filterUndefined(books);
+  return deduplicateBooks(definedBooks);
 }
 
 function deduplicateBooks(books: Book[]): Book[] {
@@ -34,27 +57,6 @@ function deduplicateBooks(books: Book[]): Book[] {
   return result;
 }
 
-function googleBooksResultToBook(googleBook: any): Book | undefined {
-  console.log(googleBook);
-  const isbn13 = getISBN(googleBook);
-  if(!isbn13) return undefined; 
-  if (googleBook.volumeInfo.authors == undefined) googleBook.volumeInfo.authors = [""];
-  return {
-    "title": googleBook.volumeInfo.title,
-    "authors": googleBook.volumeInfo.authors,
-    "isbn": isbn13
-  };
-}
-
-function getISBN(googleBook: any): string | undefined {
-  if (!googleBook.volumeInfo.industryIdentifiers) return undefined; 
-  const isbn13 = googleBook.volumeInfo.industryIdentifiers.find((v: any)=>v.type==="ISBN_13")?.identifier;
-  if (isbn13) return isbn13;
-  const isbn10 = googleBook.volumeInfo.industryIdentifiers.find((v: any)=>v.type==="ISBN_10")?.identifier;
-  if (isbn10) return isbn.toIsbn13(isbn10);
-  return undefined;
-}
-
 interface SearchViewProps {
   onClose(): void;
   onAdd(isbn: string, state: ReadingState): void;
@@ -62,20 +64,44 @@ interface SearchViewProps {
 
 export function SearchView(props: SearchViewProps) {
   const [searchInput, setSearchInput] = useState("");
-  const [searchResult, setSearchResult] = useState<Book[]>([]);
+
   const [loading, setLoading] = useState<boolean>(false);
+  const [searchResult, setSearchResult] = useState<Book[]>([]);
+
+  async function searchFor(searchterm: string) {
+    setLoading(true);
+    const result = await searchGoogleBooks(searchterm);
+    setSearchResult(result);
+    setLoading(false);
+  }
+
   const [bookToAdd, setBookToAdd] = useState<string | undefined>();
+
+  function addBookToAddToLibrary(state: ReadingState) {
+    props.onAdd(bookToAdd!, ReadingState.to_read);
+
+    setSearchResult(
+      searchResult.map((book) => {
+        if (book.isbn !== bookToAdd) return book;
+        else
+          return {
+            ...book,
+            state: state
+          };
+      })
+    );
+
+    setBookToAdd(undefined);
+  }
+  
   return (
     <View>
       <SearchBar
         placeholder="Bücher hinzufügen ..."
         value={searchInput}
         onChangeText={async (text) => {
-          setLoading(true);
           setSearchInput(text);
-          const result = await search(text);
-          setSearchResult(result);
-          setLoading(false);
+          await searchFor(text);
         }}
       />
       <FlatList
@@ -88,6 +114,7 @@ export function SearchView(props: SearchViewProps) {
             <ListItem
               title={info.item.title}
               subtitle={info.item.authors.join(", ")}
+              bottomDivider
               checkmark={
                 !!info.item.state || (
                   <Button
@@ -98,7 +125,6 @@ export function SearchView(props: SearchViewProps) {
                   />
                 )
               }
-              bottomDivider
             />
           );
         }}
@@ -109,34 +135,19 @@ export function SearchView(props: SearchViewProps) {
           <Button
             title="Lese-Wunschliste"
             onPress={() => {
-              props.onAdd(bookToAdd!, ReadingState.to_read);
-
-              setSearchResult(
-                searchResult.map((book) => {
-                  if (book.isbn !== bookToAdd) return book;
-                  else
-                    return {
-                      isbn: book.isbn,
-                      authors: book.authors,
-                      title: book.title,
-                    };
-                })
-              );
-              setBookToAdd(undefined);
+              addBookToAddToLibrary(ReadingState.to_read);
             }}
           />
           <Button
             title="Aktuell"
             onPress={() => {
-              props.onAdd(bookToAdd!, ReadingState.reading);
-              setBookToAdd(undefined);
+              addBookToAddToLibrary(ReadingState.reading);
             }}
           />
           <Button
             title="Gelesen"
             onPress={() => {
-              props.onAdd(bookToAdd!, ReadingState.completed);
-              setBookToAdd(undefined);
+              addBookToAddToLibrary(ReadingState.completed);
             }}
           />
         </View>
