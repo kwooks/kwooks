@@ -31,36 +31,7 @@ if (firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
 
 export default function App() {
   const [panelActive, setPanelActive] = useState<boolean>(true);
-  const [library, setLibrary] = useState<Book[]>([]);
-  useEffect(() => {
-    async function doit() {
-      const response = await fetch(
-        "https://us-central1-kwooks.cloudfunctions.net/getUsersLibrary",
-        {
-          body: JSON.stringify({
-            token: "dc7bb80a-7df0-4d5b-a8cb-26ba8f654e5a",
-          }),
-          headers: { "Content-Type": "application/json" },
-          method: "POST",
-        }
-      );
-
-      const library: {
-        library: { isbn: string; state: ReadingState }[];
-      } = await response.json();
-      console.log(library);
-
-      const lib = library.library.map((element) => {
-        const book:Book = {isbn:element.isbn, author:element.isbn, state:element.state, title:element.isbn};
-        return book;
-      });
-
-      setLibrary(lib);
-      console.log(lib);
-    }
-    doit();
-  }, [setLibrary]);
-
+  
   return (
     <View style={{ paddingTop: Constants.statusBarHeight, height: "100%" }}>
       <QuoteScreen
@@ -77,7 +48,6 @@ export default function App() {
         barStyle={(undefined as unknown) as object}
       >
         <LibraryScreen
-          books={library}
           onOpenFilteredQuoteView={(book: Book) => {
             return;
           }}
