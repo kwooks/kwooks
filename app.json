@@ -17,7 +17,11 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kwooks.kwooks"
+    },
+    "android": {
+      "package": "com.kwooks.kwooks"
     },
     "web": {
       "favicon": "./assets/favicon.png"
