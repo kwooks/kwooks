@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { View } from "react-native";
 import { QuoteScreen } from "./QuoteScreen";
-import { LibraryScreen } from "./LibraryScreen"
-import Constants from "expo-constants"
-import SwipeablePanel from "rn-swipeable-panel";
+import { LibraryScreen } from "./LibraryScreen";
+import Constants from "expo-constants";
 import * as firebase from "firebase";
 import { Book } from "./Book";
+import { BottomNavigation } from "react-native-paper";
 
 var firebaseConfig = {
   apiKey: "AIzaSyD5usI-2ccLN54HYvWrQDC58IiPci-oRy4",
@@ -19,30 +19,44 @@ var firebaseConfig = {
 
 if (firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
 
+enum Scenes {
+  Quotes,
+  Library,
+}
+
 export default function App() {
-  const [panelActive, setPanelActive] = useState<boolean>(true);
-  
+  const [scene, setScene] = useState<Scenes>(Scenes.Quotes);
+
   return (
     <View style={{ paddingTop: Constants.statusBarHeight, height: "100%" }}>
-      <QuoteScreen
-        quote="C'est la fucking vie!"
-        author="someone smart"
-        book="very good book"
-        onNextQuoteRequested={() => {}}
+      <BottomNavigation
+        navigationState={{
+          index: scene,
+          routes: [
+            { key: "" + Scenes.Quotes, title: "Quotes", icon: "text" },
+            { key: "" + Scenes.Library, title: "Library", icon: "library" },
+          ],
+        }}
+        onIndexChange={setScene}
+        renderScene={BottomNavigation.SceneMap({
+          [Scenes.Quotes]: () => (
+            <QuoteScreen
+              quote="C'est la fucking vie!"
+              author="someone smart"
+              book="very good book"
+              onNextQuoteRequested={() => {}}
+            />
+          ),
+          [Scenes.Library]: (props) => (
+            <LibraryScreen
+              onOpenFilteredQuoteView={(book: Book) => {
+                props.jumpTo("" + Scenes.Quotes);
+                return;
+              }}
+            />
+          ),
+        })}
       />
-      <SwipeablePanel
-        fullWidth
-        openLarge
-        isActive={panelActive}
-        onClose={() => setPanelActive(false)}
-        barStyle={(undefined as unknown) as object}
-      >
-        <LibraryScreen
-          onOpenFilteredQuoteView={(book: Book) => {
-            return;
-          }}
-        />
-      </SwipeablePanel>
     </View>
   );
 }
