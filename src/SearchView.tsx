@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { Text, View, Button, FlatList } from "react-native";
 import { SearchBar, ListItem, Overlay } from "react-native-elements";
 import { isbn } from "simple-isbn";
 import { Book, ReadingState } from "./Book";
+import { LibraryContext } from "./LibraryScreen";
 
 function filterUndefined<T>(arr: (T | undefined)[]): T[] {
   return arr.filter((v) => v != undefined) as T[];
@@ -77,23 +78,14 @@ export function SearchView(props: SearchViewProps) {
 
   const [bookToAdd, setBookToAdd] = useState<string | undefined>();
 
+  const { books, upsertToLibrary } = useContext(LibraryContext);
+
   function addBookToAddToLibrary(state: ReadingState) {
-    props.onAdd(bookToAdd!, ReadingState.to_read);
-
-    setSearchResult(
-      searchResult.map((book) => {
-        if (book.isbn !== bookToAdd) return book;
-        else
-          return {
-            ...book,
-            state: state
-          };
-      })
-    );
-
+    upsertToLibrary(bookToAdd!, ReadingState.to_read);
+    setSearchInput("");
     setBookToAdd(undefined);
   }
-  
+
   return (
     <View>
       <SearchBar
@@ -110,13 +102,14 @@ export function SearchView(props: SearchViewProps) {
         }}
         data={searchResult}
         renderItem={(info) => {
+          const isBookInLibrary = books.map(b => b.isbn).includes(info.item.isbn)
           return (
             <ListItem
               title={info.item.title}
               subtitle={info.item.authors.join(", ")}
               bottomDivider
               checkmark={
-                !!info.item.state || (
+                  isBookInLibrary || (
                   <Button
                     title="+"
                     onPress={() => {
