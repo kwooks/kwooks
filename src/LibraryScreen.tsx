@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Text, View, SectionList, Animated } from "react-native";
-import { ListItem, Overlay, colors } from "react-native-elements";
-import { TouchableOpacity } from "react-native-gesture-handler";
+import { Text, View, SectionList, Animated, TouchableOpacity } from "react-native";
+import { ListItem, Overlay } from "react-native-elements";
 import { RadioButton } from "react-native-paper";
 import { Book, ReadingState } from "./Book";
 import { SearchView } from "./SearchView";
@@ -79,14 +78,32 @@ function useLibrary(): [Book[], React.Dispatch<React.SetStateAction<Book[]>>] {
 export function LibraryScreen(props: LibraryScreenProps) {
   const [selectedBook, setSelectedBook] = useState<Book | undefined>();
 
+  const [draggedBook, setDraggedBook] = useState<Book | undefined>();
+
   const [library, setLibrary] = useLibrary();
 
   const sortedBooks = groupBooksByCategory(library);
 
+  function handleDrop(targetState: ReadingState) {
+    setLibrary(
+      library.map((element) => {
+        if (element === draggedBook) {
+          return {
+            ...draggedBook,
+            state: targetState,
+          };
+        } else return element;
+      })
+    );
+    publishBookState(draggedBook!.isbn, targetState);
+    setDraggedBook(undefined);
+  }
+
   return (
-    <View style={{ flex: 1, paddingHorizontal: 30, paddingVertical: 20 }}>
-      <SearchView onAdd={() => {}} onClose={() => {}} />
-      <Provider>
+    <Provider>
+      <View style={{ flex: 1, paddingHorizontal: 30, paddingVertical: 20 }}>
+        <SearchView onAdd={() => {}} onClose={() => {}} />
+
         <SectionList
           sections={[
             { state: ReadingState.to_read, data: sortedBooks.to_read },
@@ -94,57 +111,21 @@ export function LibraryScreen(props: LibraryScreenProps) {
             { state: ReadingState.completed, data: sortedBooks.completed },
           ]}
           renderSectionHeader={(sectionheader) => {
-            return (
-              <Droppable
-                onDrop={({ payload }) => {
-                  setLibrary(
-                    library.map((element) => {
-                      if (element === payload) {
-                        return {
-                          ...payload,
-                          state: sectionheader.section.state,
-                        };
-                      } else return element;
-                    })
-                  );
-                  console.log(
-                    "Draggable with the following payload was dropped",
-                    payload
-                  );
-                  publishBookState(payload.isbn, sectionheader.section.state);
-                }}
-              >
-                {({ active, viewProps }) => {
-                  let sectionTitle: string = "Beendet";
-                  if (sectionheader.section.state === ReadingState.reading)
-                    sectionTitle = "Aktuell";
-                  if (sectionheader.section.state === ReadingState.to_read)
-                    sectionTitle = "Lese-Wunschliste";
-                  
-                    console.log(active, sectionheader.section.state);
-
-                    return (
-                    
-                    <Animated.View {...viewProps} style={[viewProps.style]}>
-                      <View>
-                        <ListItem
-                          title={sectionTitle}
-                          bottomDivider
-                          containerStyle={{
-                            backgroundColor: active ? "rgba(0,0,0,0.1)":"white"
-                          }}
-                        />
-                      </View>
-                    </Animated.View>
-                  );
-                }}
-              </Droppable>
-            );
+            let sectionTitle: string = "Beendet";
+            if (sectionheader.section.state === ReadingState.reading)
+              sectionTitle = "Aktuell";
+            if (sectionheader.section.state === ReadingState.to_read)
+              sectionTitle = "Lese-Wunschliste";
+            return <ListItem title={sectionTitle} bottomDivider />;
           }}
           renderItem={({ item }) => {
             return (
               <View>
-                <Draggable payload={item}>
+                <Draggable
+                  onDragStart={() => {
+                    setDraggedBook(item);
+                  }}
+                >
                   {({ viewProps }) => {
                     return (
                       <Animated.View {...viewProps} style={[viewProps.style]}>
@@ -167,44 +148,110 @@ export function LibraryScreen(props: LibraryScreenProps) {
           }}
           keyExtractor={(item) => (typeof item === "string" ? item : item.isbn)}
         />
-      </Provider>
-      <Overlay isVisible={!!selectedBook} animationType="slide" transparent>
-        <View style={{ padding: 20 }}>
-          <Text style={{ fontSize: 20 }}>Verschieben nach</Text>
+        <Overlay isVisible={!!selectedBook} animationType="slide" transparent>
+          <View style={{ padding: 20 }}>
+            <Text style={{ fontSize: 20 }}>Verschieben nach</Text>
 
-          <RadioButton.Group
-            onValueChange={async (value) => {
-              setSelectedBook(undefined);
-              setLibrary(
-                library.map((book) => {
-                  if (book === selectedBook) {
-                    return { ...book, state: value as ReadingState };
-                  }
-                  return book;
-                })
-              );
+            <RadioButton.Group
+              onValueChange={async (value) => {
+                setSelectedBook(undefined);
+                setLibrary(
+                  library.map((book) => {
+                    if (book === selectedBook) {
+                      return { ...book, state: value as ReadingState };
+                    }
+                    return book;
+                  })
+                );
 
-              await publishBookState(selectedBook!.isbn, value as ReadingState);
-            }}
-            value={selectedBook?.state!}
-          >
-            <View style={{ flexDirection: "column", flex: 1 }}>
-              <View style={{ flex: 1, flexDirection: "row" }}>
-                <RadioButton value="to_read"></RadioButton>
-                <ListItem title="Lese-Wunschliste"></ListItem>
+                await publishBookState(
+                  selectedBook!.isbn,
+                  value as ReadingState
+                );
+              }}
+              value={selectedBook?.state!}
+            >
+              <View style={{ flexDirection: "column", flex: 1 }}>
+                <View style={{ flex: 1, flexDirection: "row" }}>
+                  <RadioButton value="to_read"></RadioButton>
+                  <ListItem title="Lese-Wunschliste"></ListItem>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ListItem title="Aktuell"></ListItem>
+                  <RadioButton value="reading"></RadioButton>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ListItem title="Gelesen"></ListItem>
+                  <RadioButton value="completed"></RadioButton>
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <ListItem title="Aktuell"></ListItem>
-                <RadioButton value="reading"></RadioButton>
-              </View>
-              <View style={{ flex: 1 }}>
-                <ListItem title="Gelesen"></ListItem>
-                <RadioButton value="completed"></RadioButton>
-              </View>
-            </View>
-          </RadioButton.Group>
-        </View>
-      </Overlay>
-    </View>
+            </RadioButton.Group>
+          </View>
+        </Overlay>
+      </View>
+
+      <View
+        style={{
+          position: "absolute",
+          height: !!draggedBook ? "100%" : "0%",
+          width: "100%",
+          alignItems: "center",
+          justifyContent: "space-around",
+          backgroundColor: "rgba(0, 0, 0, 0.1)",
+        }}
+      >
+        <Droppable
+          onDrop={() => {
+            handleDrop(ReadingState.to_read);
+          }}
+        >
+          {({ active, viewProps }) => (
+            <Animated.View
+              {...viewProps}
+              style={[
+                viewProps.style,
+                { padding: 100, backgroundColor: active ? "grey" : undefined },
+              ]}
+            >
+              <Text>Lese-Wunschliste</Text>
+            </Animated.View>
+          )}
+        </Droppable>
+        <Droppable
+          onDrop={() => {
+            handleDrop(ReadingState.reading);
+          }}
+        >
+          {({ active, viewProps }) => (
+            <Animated.View
+              {...viewProps}
+              style={[
+                viewProps.style,
+                { padding: 100, backgroundColor: active ? "grey" : undefined },
+              ]}
+            >
+              <Text>Aktuell</Text>
+            </Animated.View>
+          )}
+        </Droppable>
+        <Droppable
+          onDrop={() => {
+            handleDrop(ReadingState.completed);
+          }}
+        >
+          {({ active, viewProps }) => (
+            <Animated.View
+              {...viewProps}
+              style={[
+                viewProps.style,
+                { padding: 100, backgroundColor: active ? "grey" : undefined },
+              ]}
+            >
+              <Text>Beendet</Text>
+            </Animated.View>
+          )}
+        </Droppable>
+      </View>
+    </Provider>
   );
 }
