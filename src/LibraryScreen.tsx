@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { Text, View, SectionList } from "react-native";
-import { ListItem, Overlay } from "react-native-elements";
+import { Text, View, SectionList, Animated } from "react-native";
+import { ListItem, Overlay, colors } from "react-native-elements";
 import { TouchableOpacity } from "react-native-gesture-handler";
 import { RadioButton } from "react-native-paper";
 import { Book, ReadingState } from "./Book";
+import { SearchView } from "./SearchView";
+import { createDndContext } from "react-native-easy-dnd";
+
+const { Provider, Droppable, Draggable } = createDndContext();
 
 function groupBooksByCategory(books: Book[]) {
   const completed: Book[] = [];
@@ -81,34 +85,92 @@ export function LibraryScreen(props: LibraryScreenProps) {
 
   return (
     <View style={{ flex: 1, paddingHorizontal: 30, paddingVertical: 20 }}>
-      <SectionList
-        sections={[
-          { title: "Aktuell", data: sortedBooks.reading },
-          { title: "Beendet", data: sortedBooks.completed },
-          { title: "Anstehend", data: sortedBooks.to_read },
-        ]}
-        renderItem={({ item }) => {
-          return (
-            <TouchableOpacity
-              onPress={() => props.onOpenFilteredQuoteView(item)}
-              onLongPress={() => setSelectedBook(item)}
-            >
+      <SearchView onAdd={() => {}} onClose={() => {}} />
+      <Provider>
+        <SectionList
+          sections={[
+            { state: ReadingState.to_read, data: sortedBooks.to_read },
+            { state: ReadingState.reading, data: sortedBooks.reading },
+            { state: ReadingState.completed, data: sortedBooks.completed },
+          ]}
+          renderSectionHeader={(sectionheader) => {
+            return (
+              <Droppable
+                onDrop={({ payload }) => {
+                  setLibrary(
+                    library.map((element) => {
+                      if (element === payload) {
+                        return {
+                          ...payload,
+                          state: sectionheader.section.state,
+                        };
+                      } else return element;
+                    })
+                  );
+                  console.log(
+                    "Draggable with the following payload was dropped",
+                    payload
+                  );
+                  publishBookState(payload.isbn, sectionheader.section.state);
+                }}
+              >
+                {({ active, viewProps }) => {
+                  let sectionTitle: string = "Beendet";
+                  if (sectionheader.section.state === ReadingState.reading)
+                    sectionTitle = "Aktuell";
+                  if (sectionheader.section.state === ReadingState.to_read)
+                    sectionTitle = "Lese-Wunschliste";
+                  
+                    console.log(active, sectionheader.section.state);
+
+                    return (
+                    
+                    <Animated.View {...viewProps} style={[viewProps.style]}>
+                      <View>
+                        <ListItem
+                          title={sectionTitle}
+                          bottomDivider
+                          containerStyle={{
+                            backgroundColor: active ? "rgba(0,0,0,0.1)":"white"
+                          }}
+                        />
+                      </View>
+                    </Animated.View>
+                  );
+                }}
+              </Droppable>
+            );
+          }}
+          renderItem={({ item }) => {
+            return (
               <View>
-                <ListItem title={item.title}></ListItem>
+                <Draggable payload={item}>
+                  {({ viewProps }) => {
+                    return (
+                      <Animated.View {...viewProps} style={[viewProps.style]}>
+                        <TouchableOpacity
+                          onPress={() => props.onOpenFilteredQuoteView(item)}
+                          onLongPress={() => setSelectedBook(item)}
+                        >
+                          <ListItem
+                            title={item.title}
+                            subtitle={item.authors.join(", ")}
+                            bottomDivider
+                          />
+                        </TouchableOpacity>
+                      </Animated.View>
+                    );
+                  }}
+                </Draggable>
               </View>
-            </TouchableOpacity>
-          );
-        }}
-        renderSectionHeader={(sectionheader) => {
-          return (
-            <Text style={{ fontSize: 20 }}>{sectionheader.section.title}</Text>
-          );
-        }}
-        keyExtractor={(item) => (typeof item === "string" ? item : item.isbn)}
-      />
+            );
+          }}
+          keyExtractor={(item) => (typeof item === "string" ? item : item.isbn)}
+        />
+      </Provider>
       <Overlay isVisible={!!selectedBook} animationType="slide" transparent>
-        <View>
-          <Text>Verschieben nach</Text>
+        <View style={{ padding: 20 }}>
+          <Text style={{ fontSize: 20 }}>Verschieben nach</Text>
 
           <RadioButton.Group
             onValueChange={async (value) => {
@@ -126,17 +188,19 @@ export function LibraryScreen(props: LibraryScreenProps) {
             }}
             value={selectedBook?.state!}
           >
-            <View>
-              <ListItem title="Beendet"></ListItem>
-              <RadioButton value="completed"></RadioButton>
-            </View>
-            <View>
-              <ListItem title="Aktuell"></ListItem>
-              <RadioButton value="reading"></RadioButton>
-            </View>
-            <View>
-              <ListItem title="Zu lesen"></ListItem>
-              <RadioButton value="to_read"></RadioButton>
+            <View style={{ flexDirection: "column", flex: 1 }}>
+              <View style={{ flex: 1, flexDirection: "row" }}>
+                <RadioButton value="to_read"></RadioButton>
+                <ListItem title="Lese-Wunschliste"></ListItem>
+              </View>
+              <View style={{ flex: 1 }}>
+                <ListItem title="Aktuell"></ListItem>
+                <RadioButton value="reading"></RadioButton>
+              </View>
+              <View style={{ flex: 1 }}>
+                <ListItem title="Gelesen"></ListItem>
+                <RadioButton value="completed"></RadioButton>
+              </View>
             </View>
           </RadioButton.Group>
         </View>
