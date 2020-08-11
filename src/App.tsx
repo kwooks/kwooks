@@ -41,9 +41,7 @@ export default function App() {
         renderScene={BottomNavigation.SceneMap({
           [Scenes.Quotes]: () => (
             <QuoteScreen
-              quote="C'est la fucking vie!"
-              author="someone smart"
-              book="very good book"
+              book="anna karenina"
               onNextQuoteRequested={() => {}}
             />
           ),
