@@ -42,7 +42,6 @@ export default function App() {
           [Scenes.Quotes]: () => (
             <QuoteScreen
               book="anna karenina"
-              onNextQuoteRequested={() => {}}
             />
           ),
           [Scenes.Library]: (props) => (

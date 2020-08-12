@@ -3,35 +3,61 @@ import { Text, View, Button, Alert } from "react-native";
 
 interface QuoteScreenProps {
   book: string;
-  onNextQuoteRequested(): void;
+  //onNextQuoteRequested(): void;
 }
 
-function getRandomNumberFromBeatifulDistribution(quotes: any[]): number {
-  const randNumber = Math.floor(Math.random() * Math.floor(1000*quotes.length));
-  const quoteNumber = (((1000*quotes.length)/(randNumber + 1)) - 1) % quotes.length;
+interface QuoteData {
+  quote: string | undefined;
+  author: string | undefined;
+  book: string | undefined;
+  quoteNumber: number | undefined;
+}
+
+function getRandomNumber(quotes: any[]): number {
+  const randNumber = Math.floor(
+    Math.random() * Math.floor(1000 * quotes.length)
+  );
+  const quoteNumber =
+    ((1000 * quotes.length) / (randNumber + 1) - 1) % quotes.length;
   return Math.round(quoteNumber);
 }
 
 export function QuoteScreen(props: QuoteScreenProps) {
-  const [curretnQuote, setCurrentQuote] = useState<string>("");
-  const [currentAuthor, setCurrentAuthor] = useState<string>("");
-  const [currentBook, setCurrentBook] = useState<string>("");
+  const [currentQuoteData, setCurrentQuoteData] = useState<QuoteData>();
+  const [nextQuoteData, setNextQuoteData] = useState<QuoteData>();
+  const [loading, setLoading] = useState<boolean>(false);
+
+  async function updateQuoteScreen() {
+    setNextQuoteData((quote) => {
+      setCurrentQuoteData(quote);
+      return quote;
+    });
+
+    setLoading(true);
+    const response = await fetch(
+      `https://goodquotesapi.herokuapp.com/title/${encodeURIComponent(
+        quotedBook
+      )}`
+    );
+    let result = await response.json();
+    setLoading(false);
+    result.quotes = result.quotes.filter((quote: any) => quote.quote.length < 320);
+    let quoteNum = getRandomNumber(result.quotes);
+    setNextQuoteData({
+      quote: result.quotes[quoteNum].quote,
+      author: result.quotes[quoteNum].author,
+      book: result.quotes[quoteNum].publication,
+      quoteNumber: quoteNum,
+    });
+  }
 
   const quotedBook = props.book;
   useEffect(() => {
-    async function doit() {
-      const response = await fetch(
-        `https://goodquotesapi.herokuapp.com/title/${encodeURIComponent(quotedBook)}`
-      )
-    const result = await response.json();
-    const quoteNumber = getRandomNumberFromBeatifulDistribution(result.quotes);
-    console.log(quoteNumber);
-
-    setCurrentQuote(result.quotes[quoteNumber].quote);
-    setCurrentAuthor(result.quotes[quoteNumber].author);
-    setCurrentBook(result.quotes[quoteNumber].publication);
+    async function updateTwice() {
+      await updateQuoteScreen();
+      await updateQuoteScreen();
     }
-    doit();
+    updateTwice();
   }, [quotedBook]);
 
   return (
@@ -45,10 +71,12 @@ export function QuoteScreen(props: QuoteScreenProps) {
         paddingVertical: 20,
       }}
     >
-      <Text>{currentBook}</Text>
+      <Text>{currentQuoteData?.book}</Text>
       <View>
-        <Text style={{ fontSize: 30, textAlign: "center" }}>{curretnQuote}</Text>
-        <Text style={{ textAlign: "right" }}>~ {currentAuthor}</Text>
+        <Text style={{ fontSize: 30, textAlign: "center" }}>
+          {currentQuoteData?.quote}
+        </Text>
+        <Text style={{ textAlign: "right" }}>~ {currentQuoteData?.author}</Text>
       </View>
 
       <View
@@ -58,10 +86,19 @@ export function QuoteScreen(props: QuoteScreenProps) {
           width: "100%",
         }}
       >
-        <Button title="Next" onPress={props.onNextQuoteRequested} />
-        <Button title="share" onPress={() => {
-          Alert.alert("TODO: Implement")
-        }} />
+        <Button
+          title="Next"
+          disabled={loading}
+          onPress={() => {
+            if (!loading) updateQuoteScreen();
+          }}
+        />
+        <Button
+          title="share"
+          onPress={() => {
+            Alert.alert("TODO: Implement");
+          }}
+        />
       </View>
     </View>
   );
