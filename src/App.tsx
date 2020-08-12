@@ -97,10 +97,11 @@ export default function App() {
           navigationState={{
             index: scene,
             routes: [
-              { key: "" + Scenes.Quotes, title: "Quotes", icon: "text" },
-              { key: "" + Scenes.Library, title: "Library", icon: "library" },
+              { key: "" + Scenes.Quotes, title: "Quotes", icon: "text", color: '#3F51B5'},
+              { key: "" + Scenes.Library, title: "Library", icon: "library", color:"#041E42" },
             ],
           }}
+          shifting
           onIndexChange={setScene}
           renderScene={BottomNavigation.SceneMap({
             [Scenes.Quotes]: () => (
