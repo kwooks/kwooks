@@ -48,9 +48,11 @@ export const createUserAccount = functions.https.onRequest(
 
     await db.collection("users").add({ tokens: [tokenOfNewUser] });
 
-    response.json({
-      token: tokenOfNewUser,
-    });
+    response
+      .json({
+        token: tokenOfNewUser,
+      })
+      .end();
   }
 );
 
