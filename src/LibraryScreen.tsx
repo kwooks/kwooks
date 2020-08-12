@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 
+import {getToken} from "./token"
 import { ListItem, Overlay } from "react-native-elements";
 import React, { useState, useEffect, useContext } from "react";
 import { RadioButton } from "react-native-paper";
@@ -34,7 +35,7 @@ export async function publishBookState(
 ) {
   await fetch("https://us-central1-kwooks.cloudfunctions.net/addToLibrary", {
     body: JSON.stringify({
-      token: "dc7bb80a-7df0-4d5b-a8cb-26ba8f654e5a",
+      token: await getToken(),
       isbn: bookISBN,
       state: newState,
     }),
@@ -84,7 +85,7 @@ export function LibraryScreen(props: LibraryScreenProps) {
             { state: ReadingState.completed, data: sortedBooks.completed },
           ]}
           renderSectionHeader={(sectionheader) => {
-            let sectionTitle: string = "Beendet";
+            let sectionTitle: string = "Gelesen";
             if (sectionheader.section.state === ReadingState.reading)
               sectionTitle = "Aktuell";
             if (sectionheader.section.state === ReadingState.to_read)
@@ -176,7 +177,7 @@ export function LibraryScreen(props: LibraryScreenProps) {
                 { padding: 100, backgroundColor: active ? "grey" : undefined },
               ]}
             >
-              <Text>Beendet</Text>
+              <Text>Gelesen</Text>
             </Animated.View>
           )}
         </Droppable>

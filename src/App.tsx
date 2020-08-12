@@ -3,34 +3,22 @@ import { View } from "react-native";
 import { QuoteScreen } from "./QuoteScreen";
 import { LibraryScreen } from "./LibraryScreen";
 import Constants from "expo-constants";
-import * as firebase from "firebase";
 import { Book, ReadingState } from "./Book";
 import { BottomNavigation } from "react-native-paper";
 import { LibraryContext, publishBookState } from "./LibraryScreen";
 import { isbn } from "simple-isbn";
-
-var firebaseConfig = {
-  apiKey: "AIzaSyD5usI-2ccLN54HYvWrQDC58IiPci-oRy4",
-  authDomain: "kwooks.firebaseapp.com",
-  databaseURL: "https://kwooks.firebaseio.com",
-  projectId: "kwooks",
-  storageBucket: "kwooks.appspot.com",
-  messagingSenderId: "980225253473",
-  appId: "1:980225253473:web:709db0e55f9c32fa46ca20",
-};
-
-if (firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
-
-console.disableYellowBox = true;
+import {getToken} from "./token"
 
 enum Scenes {
   Quotes,
   Library,
 }
 
-export default function App() {
-  const [scene, setScene] = useState<Scenes>(Scenes.Quotes);
 
+
+export default function App() {
+
+  const [scene, setScene] = useState<Scenes>(Scenes.Quotes);
   const [library, setLibrary] = useState<Book[]>([]);
   useEffect(() => {
     async function doit() {
@@ -38,7 +26,7 @@ export default function App() {
         "https://us-central1-kwooks.cloudfunctions.net/getUsersLibrary",
         {
           body: JSON.stringify({
-            token: "dc7bb80a-7df0-4d5b-a8cb-26ba8f654e5a",
+            token: await getToken(),
           }),
           headers: { "Content-Type": "application/json" },
           method: "POST",
@@ -71,7 +59,7 @@ export default function App() {
   ) {
     await fetch("https://us-central1-kwooks.cloudfunctions.net/addToLibrary", {
       body: JSON.stringify({
-        token: "dc7bb80a-7df0-4d5b-a8cb-26ba8f654e5a",
+        token: await getToken(),
         isbn: bookISBN,
         state: initialState,
       }),
