@@ -21,6 +21,8 @@ var firebaseConfig = {
 
 if (firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
 
+console.disableYellowBox = true;
+
 enum Scenes {
   Quotes,
   Library,
@@ -63,7 +65,10 @@ export default function App() {
     doit();
   }, [setLibrary]);
 
-  async function addBookToUsersLibrary(bookISBN: string, initialState: ReadingState){
+  async function addBookToUsersLibrary(
+    bookISBN: string,
+    initialState: ReadingState
+  ) {
     await fetch("https://us-central1-kwooks.cloudfunctions.net/addToLibrary", {
       body: JSON.stringify({
         token: "dc7bb80a-7df0-4d5b-a8cb-26ba8f654e5a",
@@ -81,9 +86,22 @@ export default function App() {
         books: library,
         upsertToLibrary: async (bookISBN: string, newState: ReadingState) => {
           await publishBookState(bookISBN, newState);
-          setLibrary(library.concat([{authors:[bookISBN], title: bookISBN, state:newState, isbn: bookISBN}]));
+          setLibrary(
+            library
+              .filter((book: Book) => {
+                console.log(book.isbn == bookISBN);
+                return book.isbn != bookISBN;
+              })
+              .concat([
+                {
+                  authors: [bookISBN],
+                  title: bookISBN,
+                  state: newState,
+                  isbn: bookISBN,
+                },
+              ])
+          );
         },
-
       }}
     >
       <View style={{ paddingTop: Constants.statusBarHeight, height: "100%" }}>

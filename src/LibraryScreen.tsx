@@ -5,6 +5,7 @@ import {
   Animated,
   TouchableOpacity,
 } from "react-native";
+
 import { ListItem, Overlay } from "react-native-elements";
 import React, { useState, useEffect, useContext } from "react";
 import { RadioButton } from "react-native-paper";
@@ -66,7 +67,9 @@ export function LibraryScreen(props: LibraryScreenProps) {
   const sortedBooks = groupBooksByCategory(library);
 
   function handleDrop(targetState: ReadingState) {
+    console.log(library);
     upsertToLibrary(draggedBook!.isbn, targetState);
+    console.log(library);
     setDraggedBook(undefined);
   }
 
@@ -74,7 +77,6 @@ export function LibraryScreen(props: LibraryScreenProps) {
     <Provider>
       <View style={{ flex: 1, paddingHorizontal: 30, paddingVertical: 20 }}>
         <SearchView onAdd={() => {}} onClose={() => {}} />
-
         <SectionList
           sections={[
             { state: ReadingState.to_read, data: sortedBooks.to_read },
@@ -89,32 +91,28 @@ export function LibraryScreen(props: LibraryScreenProps) {
               sectionTitle = "Lese-Wunschliste";
             return <ListItem title={sectionTitle} bottomDivider />;
           }}
+          
           renderItem={({ item }) => {
             return (
-              <View>
-                <Draggable
-                  onDragStart={() => {
-                    setDraggedBook(item);
-                  }}
-                >
-                  {({ viewProps }) => {
-                    return (
-                      <Animated.View {...viewProps} style={[viewProps.style]}>
-                        <TouchableOpacity
-                          onPress={() => props.onOpenFilteredQuoteView(item)}
-                          onLongPress={() => setSelectedBook(item)}
-                        >
-                          <ListItem
-                            title={item.title}
-                            subtitle={item.authors.join(", ")}
-                            bottomDivider
-                          />
-                        </TouchableOpacity>
-                      </Animated.View>
-                    );
-                  }}
-                </Draggable>
-              </View>
+              <Draggable
+                onDragStart={() => {
+                  setDraggedBook(item);
+                }}
+              >
+                {({ viewProps }) => {
+                  return (
+                    <Animated.View {...viewProps} style={[viewProps.style]}>
+                      <View>
+                        <ListItem
+                          title={item.title}
+                          subtitle={item.authors.join(", ")}
+                          bottomDivider
+                        />
+                      </View>
+                    </Animated.View>
+                  );
+                }}
+              </Draggable>
             );
           }}
           keyExtractor={(item) => (typeof item === "string" ? item : item.isbn)}
