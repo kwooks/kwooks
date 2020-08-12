@@ -43,6 +43,9 @@ export function SearchView(props: SearchViewProps) {
           setSearchInput(text);
           await searchFor(text);
         }}
+        lightTheme={true}
+        inputContainerStyle={{backgroundColor:"#597091"}}
+        containerStyle={{backgroundColor:"#597091", }}
       />
       <FlatList
         keyExtractor={(book) => {

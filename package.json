@@ -21,6 +21,7 @@
     "react-native-gesture-handler": "~1.6.0",
     "react-native-paper": "^4.0.1",
     "react-native-reanimated": "~1.9.0",
+    "react-native-vector-icons": "^7.0.0",
     "react-native-web": "~0.11.7",
     "rn-swipeable-panel": "^1.1.7",
     "simple-isbn": "^1.1.5"

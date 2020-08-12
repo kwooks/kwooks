@@ -67,7 +67,7 @@ export function LibraryScreen(props: LibraryScreenProps) {
 
   return (
     <Provider>
-      <View style={{ flex: 1, paddingHorizontal: 30, paddingVertical: 20 }}>
+      <View style={{ flex: 1 }}>
         <SearchView onAdd={() => {}} onClose={() => {}} />
         <SectionList
           sections={[
@@ -81,7 +81,17 @@ export function LibraryScreen(props: LibraryScreenProps) {
               sectionTitle = "Aktuell";
             if (sectionheader.section.state === ReadingState.to_read)
               sectionTitle = "Lese-Wunschliste";
-            return <ListItem title={sectionTitle} bottomDivider />;
+            return (
+              <ListItem
+                title={sectionTitle}
+                bottomDivider
+                titleStyle={{ color: "white" }}
+                containerStyle={{
+                  backgroundColor: "#7594BF",
+                  borderBottomColor: "black",
+                }}
+              />
+            );
           }}
           renderItem={({ item }) => {
             return (
@@ -98,6 +108,7 @@ export function LibraryScreen(props: LibraryScreenProps) {
                           title={item.title}
                           subtitle={item.authors.join(", ")}
                           bottomDivider
+                          containerStyle={{ backgroundColor: "#B3C3D9" }}
                         />
                       </View>
                     </Animated.View>

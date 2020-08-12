@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Text, View, Button, Alert } from "react-native";
+import { Text, View, Share, Alert, Button } from "react-native";
+import { FontAwesome } from "@expo/vector-icons";
+import Icon from "react-native-vector-icons/FontAwesome";
 
 interface QuoteData {
   quote: string | undefined;
@@ -46,7 +48,15 @@ export function QuoteScreen() {
     });
   }
 
+  const onShare = async () => {
+    const result = await Share.share({
+      message:
+        currentQuoteData?.quote + '\n~ '+ currentQuoteData?.author  
+    });
+  };
+
   const quotedBook = "anna karenina"; // TODO
+  
   useEffect(() => {
     async function updateTwice() {
       await updateQuoteScreen();
@@ -81,19 +91,12 @@ export function QuoteScreen() {
           width: "100%",
         }}
       >
-        <Button
-          title="Next"
-          disabled={loading}
-          onPress={() => {
-            if (!loading) updateQuoteScreen();
-          }}
-        />
-        <Button
-          title="share"
-          onPress={() => {
-            Alert.alert("TODO: Implement");
-          }}
-        />
+        <Icon.Button name="share" onPress={onShare}>
+          Share
+        </Icon.Button>
+        <Icon.Button name="arrow-right" onPress={updateQuoteScreen}>
+          Next
+        </Icon.Button>
       </View>
     </View>
   );
