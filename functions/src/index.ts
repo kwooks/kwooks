@@ -1,6 +1,12 @@
+import * as fetch from "node-fetch";
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import * as uuid from "uuid";
+import { addBookToCache, getBooksFromCache } from "./booksCache";
+
+if (!globalThis.fetch) {
+  globalThis.fetch = fetch as any;
+}
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -73,6 +79,8 @@ export const addToLibrary = functions.https.onRequest(
 
     await user.ref.collection("library").doc(isbn).set({ state: state });
 
+    await addBookToCache(isbn);
+
     response.status(200).end();
   })
 );
@@ -90,6 +98,11 @@ export const deleteBookFromLibrary = functions.https.onRequest(
 export const getUsersLibrary = functions.https.onRequest(
   withAuthentication(async (request, response, user) => {
     const library_result = await user.ref.collection("library").get();
+
+    const someBooks = getBooksFromCache(library_result.docs.map((element) => {
+      return element.id;
+    }));
+    console.log(someBooks);
 
     response.json({
       library: library_result.docs.map((element) => {

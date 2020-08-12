@@ -6,13 +6,14 @@ import {
   TouchableOpacity,
 } from "react-native";
 
-import {getToken} from "./token"
+import { getToken } from "./token";
 import { ListItem, Overlay } from "react-native-elements";
 import React, { useState, useEffect, useContext } from "react";
 import { RadioButton } from "react-native-paper";
 import { Book, ReadingState } from "./Book";
 import { SearchView } from "./SearchView";
 import { createDndContext } from "react-native-easy-dnd";
+import { LibraryContext } from "./LibraryContext";
 
 const { Provider, Droppable, Draggable } = createDndContext();
 
@@ -48,16 +49,6 @@ interface LibraryScreenProps {
   onOpenFilteredQuoteView(book: Book): void;
 }
 
-interface LibraryContextValue {
-  books: Book[];
-  upsertToLibrary: (bookISBN: string, state: ReadingState) => Promise<void>;
-}
-
-export const LibraryContext = React.createContext<LibraryContextValue>({
-  books: [],
-  upsertToLibrary: async () => {},
-});
-
 export function LibraryScreen(props: LibraryScreenProps) {
   const [selectedBook, setSelectedBook] = useState<Book | undefined>();
 
@@ -92,7 +83,6 @@ export function LibraryScreen(props: LibraryScreenProps) {
               sectionTitle = "Lese-Wunschliste";
             return <ListItem title={sectionTitle} bottomDivider />;
           }}
-          
           renderItem={({ item }) => {
             return (
               <Draggable

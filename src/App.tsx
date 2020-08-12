@@ -5,7 +5,8 @@ import { LibraryScreen } from "./LibraryScreen";
 import Constants from "expo-constants";
 import { Book, ReadingState } from "./Book";
 import { BottomNavigation } from "react-native-paper";
-import { LibraryContext, publishBookState } from "./LibraryScreen";
+import { publishBookState } from "./LibraryScreen";
+import { LibraryContext } from "./LibraryContext";
 import { isbn } from "simple-isbn";
 import { getToken } from "./token";
 
@@ -50,27 +51,11 @@ export default function App() {
     doit();
   }, [setLibrary]);
 
-  async function addBookToUsersLibrary(
-    bookISBN: string,
-    initialState: ReadingState
-  ) {
-    await fetch("https://us-central1-kwooks.cloudfunctions.net/addToLibrary", {
-      body: JSON.stringify({
-        token: await getToken(),
-        isbn: bookISBN,
-        state: initialState,
-      }),
-      headers: { "Content-Type": "application/json" },
-      method: "POST",
-    });
-  }
-
   return (
     <LibraryContext.Provider
       value={{
         books: library,
         upsertToLibrary: async (bookISBN: string, newState: ReadingState) => {
-          await publishBookState(bookISBN, newState);
           setLibrary(
             library
               .filter((book: Book) => {
@@ -86,6 +71,7 @@ export default function App() {
                 },
               ])
           );
+          await publishBookState(bookISBN, newState);
         },
       }}
     >
@@ -100,7 +86,7 @@ export default function App() {
           }}
           onIndexChange={setScene}
           renderScene={BottomNavigation.SceneMap({
-            [Scenes.Quotes]: () => <QuoteScreen book="anna karenina" />,
+            [Scenes.Quotes]: () => <QuoteScreen/>,
             [Scenes.Library]: (props) => (
               <LibraryScreen
                 onOpenFilteredQuoteView={(book: Book) => {

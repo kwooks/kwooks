@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Text, View, Button, Alert } from "react-native";
 
-interface QuoteScreenProps {
-  book: string;
-  //onNextQuoteRequested(): void;
-}
-
 interface QuoteData {
   quote: string | undefined;
   author: string | undefined;
@@ -22,7 +17,7 @@ function getRandomNumber(quotes: any[]): number {
   return Math.round(quoteNumber);
 }
 
-export function QuoteScreen(props: QuoteScreenProps) {
+export function QuoteScreen() {
   const [currentQuoteData, setCurrentQuoteData] = useState<QuoteData>();
   const [nextQuoteData, setNextQuoteData] = useState<QuoteData>();
   const [loading, setLoading] = useState<boolean>(false);
@@ -51,7 +46,7 @@ export function QuoteScreen(props: QuoteScreenProps) {
     });
   }
 
-  const quotedBook = props.book;
+  const quotedBook = "anna karenina"; // TODO
   useEffect(() => {
     async function updateTwice() {
       await updateQuoteScreen();
