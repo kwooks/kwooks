@@ -7,17 +7,14 @@ import { Book, ReadingState } from "./Book";
 import { BottomNavigation } from "react-native-paper";
 import { LibraryContext, publishBookState } from "./LibraryScreen";
 import { isbn } from "simple-isbn";
-import {getToken} from "./token"
+import { getToken } from "./token";
 
 enum Scenes {
   Quotes,
   Library,
 }
 
-
-
 export default function App() {
-
   const [scene, setScene] = useState<Scenes>(Scenes.Quotes);
   const [library, setLibrary] = useState<Book[]>([]);
   useEffect(() => {
@@ -104,14 +101,7 @@ export default function App() {
           shifting
           onIndexChange={setScene}
           renderScene={BottomNavigation.SceneMap({
-            [Scenes.Quotes]: () => (
-              <QuoteScreen
-                quote="C'est la fucking vie!"
-                author="someone smart"
-                book="very good book"
-                onNextQuoteRequested={() => {}}
-              />
-            ),
+            [Scenes.Quotes]: () => <QuoteScreen book="anna karenina" />,
             [Scenes.Library]: (props) => (
               <LibraryScreen
                 onOpenFilteredQuoteView={(book: Book) => {
